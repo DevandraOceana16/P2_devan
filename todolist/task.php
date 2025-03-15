@@ -1,5 +1,5 @@
 <?php
-include('conn.php');
+include('../conn.php');
 
 // Function to add a new task
 function addTask($text, $priority, $due_date_time) {
