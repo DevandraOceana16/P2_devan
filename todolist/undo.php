@@ -6,7 +6,7 @@ if (isset($_GET['id'])) {
     $taskId = $_GET['id'];
 
     // Ubah status tugas menjadi belum selesai (0)
-    $query = "UPDATE tasks SET completed = 0 WHERE id = :id";
+    $query = "UPDATE individual_tasks SET completed = 0 WHERE id = :id";
     $stmt = $pdo->prepare($query);
     $stmt->bindParam(':id', $taskId);
     $stmt->execute();

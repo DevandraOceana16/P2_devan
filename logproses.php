@@ -5,6 +5,7 @@ include 'conn.php';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $username = $_POST['username'];
     $password = $_POST['password'];
+    
 
     // Query untuk mencari username dalam database menggunakan prepared statement
     $sql = "SELECT * FROM users WHERE username = :username";
@@ -19,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (password_verify($password, $user['password'])) {
             $_SESSION['username'] = $user['username'];
             $_SESSION['user_id'] = $user['id'];
+            
 
             // Redirect ke dashboard atau halaman lain
             header("Location: todolist/index.php");

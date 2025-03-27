@@ -6,46 +6,26 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 include('../conn.php');
+$user_id = $_SESSION['user_id']; // Ambil ID user yang sedang login
 
-// Ambil data tugas dari database
+// Ambil data tugas dari database berdasarkan user_id
 $filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
 
 if ($filter == 'all') {
-    $query = "SELECT * FROM tasks WHERE completed = 0 ORDER BY due_date_time ASC";
+    $query = "SELECT * FROM individual_tasks WHERE user_id = :user_id AND completed = 0 ORDER BY due_date_time ASC";
 } elseif ($filter == 'today') {
-    $query = "SELECT * FROM tasks WHERE completed = 0 AND DATE(due_date_time) = CURDATE() ORDER BY due_date_time ASC";
+    $query = "SELECT * FROM individual_tasks WHERE user_id = :user_id AND completed = 0 AND DATE(due_date_time) = CURDATE() ORDER BY due_date_time ASC";
 } elseif ($filter == 'history') {
-    $query = "SELECT * FROM tasks WHERE completed = 1 ORDER BY due_date_time DESC";
+    $query = "SELECT * FROM individual_tasks WHERE user_id = :user_id AND completed = 1 ORDER BY due_date_time DESC";
 }
 
 $stmt = $pdo->prepare($query);
+$stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
 $stmt->execute();
 $tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-
-// Menambahkan tugas baru jika ada form yang disubmit
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['task'])) {
-    $taskText = $_POST['task'];
-    $priority = $_POST['priority'];
-    $dueDate = $_POST['due_date'];
-    $dueTime = $_POST['due_time'];
-
-    // Gabungkan tanggal dan waktu untuk menjadi format DATETIME
-    $dueDateTime = $dueDate . ' ' . $dueTime;
-
-    // Query untuk menambahkan tugas baru ke database
-    $query = "INSERT INTO tasks (text, priority, due_date_time) VALUES (:text, :priority, :due_date_time)";
-    $stmt = $pdo->prepare($query);
-    $stmt->bindParam(':text', $taskText);
-    $stmt->bindParam(':priority', $priority);
-    $stmt->bindParam(':due_date_time', $dueDateTime);
-    $stmt->execute();
-
-    // Redirect untuk menghindari resubmission form
-    header('Location: index.php');
-    exit;
-}
 ?>
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -57,50 +37,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['task'])) {
 <body class="bg-gray-900 text-white flex">
 
     <!-- Sidebar -->
-    <div class="w-64 bg-gray-800 h-screen p-6 flex flex-col">
+    <div class="w-64 fixed bg-gray-800 h-screen p-6 flex flex-col">
         <h2 class="text-3xl font-semibold text-gray-200 mb-8">
             📖 To-Do List
         </h2>
 
         <!-- New Sidebar Menu -->
         <div class="flex flex-col gap-4">
-            <a href="dashboard" class="text-lg text-gray-200 hover:text-green-500">🏠Dashboard</a>
-            <a href="berita" class="text-lg text-gray-200 hover:text-green-500">🌐Berita</a>
+            <a href="index.php" class="text-lg text-gray-200 hover:text-green-500">🏠 Dashboard</a>
+            <a href="task.php" class="text-lg text-gray-200 hover:text-green-500">📖 Task</a>
+            <a href="group.php" class="text-lg text-gray-200 hover:text-green-500">👥 Groups</a>
+            <a href="invitation.php" class="text-lg text-gray-200 hover:text-green-500">👥 Invitation</a>
         </div>
         <div class="flex flex-col gap-4 mt-auto">
-    <a href="logout.php" class="text-lg text-gray-200 hover:text-red-500">🚪 Logout</a>
-</div>
+        <a href="logout.php" class="text-lg text-gray-200 hover:text-red-500">🚪 Logout</a>
+    </div>
 
     </div>
 
     <!-- Main Content -->
-    <div class="flex-1 p-8">
+    <div class="ml-64 flex-1 p-8">
         <div class="w-full max-w-5xl bg-gray-800 p-8 rounded-xl shadow-lg">
-            <h2 class="text-3xl font-semibold text-gray-200 mb-8 flex items-center gap-2">
-                📖 To-Do List App
+            <h2 class="text-xl font-semibold text-gray-200 mb-8 flex items-center gap-2">
+                Dashboard
             </h2>
-
-            <!-- Input Task -->
-            <div class="flex gap-4 mb-8">
-                <form method="POST">
-                    <input type="text" name="task" class="flex-1 p-4 border-2 border-gray-600 rounded-lg focus:outline-none focus:border-green-500 text-lg bg-gray-700 placeholder-gray-400" placeholder="Tambahkan tugas baru..." required>
-                    
-                    <!-- Prioritas Dropdown -->
-                    <select name="priority" class="p-4 border-2 border-gray-600 rounded-lg bg-gray-700 text-lg focus:outline-none focus:border-green-500">
-                        <option value="1">Urgent 🔴</option>
-                        <option value="2">Medium 🟡</option>
-                        <option value="3">Easy 🟢</option>
-                    </select>
-
-                    <!-- Due Date and Time Picker -->
-                    <input type="date" name="due_date" class="p-4 border-2 border-gray-600 rounded-lg bg-gray-700 text-lg focus:outline-none focus:border-green-500" required>
-                    <input type="time" name="due_time" class="p-4 border-2 border-gray-600 rounded-lg bg-gray-700 text-lg focus:outline-none focus:border-green-500" required>
-
-                    <button type="submit" class="bg-green-500 text-white p-4 rounded-lg text-lg font-semibold hover:bg-green-600 transition-colors">
-                        <i class="fas fa-plus"></i> ➕Tambah
-                    </button>
-                </form>
-            </div>
 
             <div class="mb-4">
                 <a href="?filter=all" class="bg-blue-500 text-white p-3 rounded-lg hover:bg-blue-600 transition-colors">All Task</a>

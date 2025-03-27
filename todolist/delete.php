@@ -12,12 +12,12 @@ if (!$taskId) {
 }
 
 // Query untuk menghapus tugas dari database
-$query = "DELETE FROM tasks WHERE id = :id";
+$query = "DELETE FROM individual_tasks WHERE id = :id";
 $stmt = $pdo->prepare($query);
 $stmt->bindParam(':id', $taskId);
 $stmt->execute();
 
 // Redirect ke halaman utama setelah penghapusan
-header('Location: index.php');
+header('Location: task.php');
 exit;
 ?>

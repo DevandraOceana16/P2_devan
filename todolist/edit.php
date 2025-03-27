@@ -11,7 +11,7 @@ if (!$taskId) {
 }
 
 // Ambil data tugas dari database
-$query = "SELECT * FROM tasks WHERE id = :id";
+$query = "SELECT * FROM individual_tasks WHERE id = :id";
 $stmt = $pdo->prepare($query);
 $stmt->bindParam(':id', $taskId);
 $stmt->execute();
@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dueDateTime = $dueDate . ' ' . $dueTime;
 
     // Query untuk memperbarui tugas di database
-    $query = "UPDATE tasks SET text = :text, priority = :priority, due_date_time = :due_date_time WHERE id = :id";
+    $query = "UPDATE individual_tasks SET text = :text, priority = :priority, due_date_time = :due_date_time WHERE id = :id";
     $stmt = $pdo->prepare($query);
     $stmt->bindParam(':text', $taskText);
     $stmt->bindParam(':priority', $priority);
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bindParam(':id', $taskId);
     $stmt->execute();
 
-    header('Location: index.php');
+    header('Location: task.php');
     exit;
 }
 ?>
@@ -76,6 +76,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit" class="w-full bg-green-500 text-white p-4 rounded-lg text-lg font-semibold hover:bg-green-600 transition-colors">
                 Simpan Perubahan
             </button>
+
+            <button type="button" onclick="window.location.href='index.php'" class="w-full bg-gray-600 text-white p-4 rounded-lg text-lg font-semibold hover:bg-gray-700 transition-colors mt-2">
+                Kembali
+            </button>
+
         </form>
     </div>
 
