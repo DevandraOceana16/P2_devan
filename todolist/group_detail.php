@@ -38,7 +38,7 @@ $stmt->execute();
 $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Ambil daftar task dalam grup
-$query = "SELECT t.id, t.text, t.priority, t.due_date_time, u.username AS assigned_user
+$query = "SELECT t.id, t.text, t.priority, t.due_date_time, t.created_by, u.username AS assigned_user, gta.completed
           FROM group_tasks t
           INNER JOIN group_task_assignees gta ON t.id = gta.task_id
           INNER JOIN users u ON gta.user_id = u.id
@@ -47,6 +47,7 @@ $stmt = $pdo->prepare($query);
 $stmt->bindParam(':group_id', $group_id);
 $stmt->execute();
 $tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 
 
 // Tambah task (hanya admin)
@@ -227,31 +228,133 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['invite_email']) && $g
             <?php endif; ?>
 
             <h3 class="text-xl font-semibold text-gray-400 mb-4">📝 Task List</h3>
-            <ul class="mb-6">
-                <?php foreach ($tasks as $task): ?>
-                    <?php
-                        // Mapping Priority ke Emoji
-                        $priority_text = '';
-                        switch ($task['priority']) {
-                            case 1:
-                                $priority_text = 'Urgent 🔴';
-                                break;
-                            case 2:
-                                $priority_text = 'Medium 🟡';
-                                break;
-                            case 3:
-                                $priority_text = 'Easy 🟢';
-                                break;
-                        }
-                    ?>
-                    <li class="text-gray-300">
-                        <?php echo htmlspecialchars($task['text']) . " - " . htmlspecialchars($task['assigned_user']); ?> 
-                        (Priority: <?php echo $priority_text; ?>, Due: <?php echo date('d M Y, H:i', strtotime($task['due_date_time'])); ?>)
-                    </li>
-                <?php endforeach; ?>
-            </ul>
+                <ul class="mb- grid gap-2">
+                    <?php foreach ($tasks as $task): ?>
+                        <?php
+                            // Mapping Priority ke Emoji
+                            $priority_text = '';
+                            switch ($task['priority']) {
+                                case 1:
+                                    $priority_text = 'Urgent 🔴';
+                                    break;
+                                case 2:
+                                    $priority_text = 'Medium 🟡';
+                                    break;
+                                case 3:
+                                    $priority_text = 'Easy 🟢';
+                                    break;
+                            }
+                        ?>
+                        <li class="text-gray-300 bg-gray-700 p-2 rounded-md flex items-center justify-between">
+                            <div>
+                                <div>
+                                    <span class="font-medium"><?php echo htmlspecialchars($task['text']); ?>  -</span>
+                                    <span><?php echo htmlspecialchars($task['assigned_user']); ?></span>
+                                </div>
+                                <div><?php echo $priority_text; ?>, untuk: <?php echo date('d M Y, H:i', strtotime($task['due_date_time'])); ?></div>
+                            </div>
+                            <div class="flex gap-2">
+                            <div class="task-status">
+                                <?php 
+                                // Menampilkan status penyelesaian tugas
+                                if ($task['completed']) {
+                                    echo "<span class='text-green-500'>Tuntas ✔️</span>";
+                                } else {
+                                    echo "<span class='text-red-500'>Belum Tuntas ❌</span>";
+                                };
+                                ?>
+                            </div>
+
+
+
+                                <!-- Member action: Mark as completed -->
+                                <?php if (($group['is_admin'] && $task['assigned_user'] == $_SESSION['username']) || (!$group['is_admin'] && $task['assigned_user'] == $_SESSION['username'])): ?>
+                                    <button 
+                                        class="toggle-task bg-<?php echo $task['completed'] ? 'gray' : 'green'; ?>-500 text-white p-2 rounded-lg hover:bg-<?php echo $task['completed'] ? 'red' : 'green'; ?>-600"
+                                        data-task-id="<?php echo $task['id']; ?>"
+                                        data-group-id="<?php echo $group_id; ?>"
+                                        data-completed="<?php echo $task['completed'] ? '1' : '0'; ?>"
+                                    >
+                                        <?php echo $task['completed'] ? 'Batal' : 'Selesai'; ?>
+                                    </button>
+
+
+                                <?php endif; ?>
+
+                                <!-- Admin actions: Edit and Delete -->
+                                <?php if ($group['is_admin'] && $task['created_by'] == $user_id): ?>
+                                    <form action="edit_taskGroup.php" method="GET">
+                                        <input type="hidden" name="task_id" value="<?php echo $task['id']; ?>">
+                                        <button type="submit" class="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600">Edit</button>
+                                    </form>
+
+                                    <form action="delete_taskGroup.php" method="POST" onsubmit="return confirm('Yakin ingin menghapus tugas ini?');">
+                                        <input type="hidden" name="task_id" value="<?php echo $task['id']; ?>">
+                                        <button type="submit" class="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600">Hapus</button>
+                                    </form>
+
+
+                                <?php endif; ?>
+
+                            </div>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+
 
         </div>
     </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll(".toggle-task").forEach(button => {
+            button.addEventListener("click", function() {
+                const taskId = this.dataset.taskId;
+                const groupId = this.dataset.groupId;
+                const isCompleted = this.dataset.completed === "1";
+
+                // Mengirimkan data untuk memperbarui status tugas
+                fetch("completedGroup.php", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `task_id=${taskId}&group_id=${groupId}`
+                })
+                .then(response => response.text())
+                .then(() => {
+                    // Mengubah status dan tampilkan perubahannya di UI
+                    const taskStatusElement = this.closest('li').querySelector('.task-status'); // Element status di tugas
+                    if (isCompleted) {
+                        // Ubah UI status menjadi "Belum Tuntas"
+                        taskStatusElement.textContent = "Belum Tuntas ❌";
+                        taskStatusElement.classList.remove('text-green-500');
+                        taskStatusElement.classList.add('text-red-500');
+
+                        this.textContent = "Selesai";
+                        this.classList.remove("bg-gray-500", "hover:bg-gray-600");
+                        this.classList.add("bg-green-500", "hover:bg-green-600");
+                    } else {
+                        // Ubah UI status menjadi "Tuntas"
+                        taskStatusElement.textContent = "Tuntas ✔️";
+                        taskStatusElement.classList.remove('text-red-500');
+                        taskStatusElement.classList.add('text-green-500');
+
+                        this.textContent = "Batal";
+                        this.classList.remove("bg-green-500", "hover:bg-green-600");
+                        this.classList.add("bg-gray-500", "hover:bg-gray-600");
+                    }
+
+                    // Update dataset completed untuk next toggle
+                    this.dataset.completed = isCompleted ? "0" : "1";
+                })
+                .catch(error => {
+                    console.error("Error updating task status:", error);
+                });
+            });
+        });
+    });
+
+
+
+    </script>
 </body>
 </html>
